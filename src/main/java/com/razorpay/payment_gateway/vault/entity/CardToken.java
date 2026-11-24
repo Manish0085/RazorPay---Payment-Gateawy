@@ -15,6 +15,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
+@ToString(exclude = {"vaultCard"})
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class CardToken {
 

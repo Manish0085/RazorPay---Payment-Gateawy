@@ -14,6 +14,7 @@ import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -76,7 +77,7 @@ public class OrderRecord {
     @Size(max = 15)
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
-    Map<String, String> notes;
+    Map<String, Object> notes;
 
     /** After this instant the order can no longer be paid. */
     @NotNull

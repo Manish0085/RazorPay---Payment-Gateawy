@@ -46,14 +46,19 @@ public class ApiKey {
     /** Public key identifier, globally unique. Prefix must match the environment. */
     @NotBlank
     @Pattern(regexp = "^pg_(test|live)_[A-Za-z0-9]{14,32}$")
-    @Column(name = "key_id", nullable = false, updatable = false, unique = true, length = 48)
+    @Column(name = "key_id", nullable = false, updatable = false, unique = true, length = 50)
     String keyId;
 
     /** Lowercase hex SHA-256 of the secret (64 chars). Never the raw secret. */
     @NotBlank
     @Pattern(regexp = "^[0-9a-f]{64}$")
-    @Column(name = "key_secret_hash", nullable = false, length = 64)
+    @Column(name = "key_secret_hash", nullable = false, length = 100)
     String keySecretHash;
+
+    @NotBlank
+    @Pattern(regexp = "^[0-9a-f]{64}$")
+    @Column(name = "key_secret_hash", length = 100)
+    String previousKeySecretHash;
 
     @NotNull
     @Enumerated(EnumType.STRING)

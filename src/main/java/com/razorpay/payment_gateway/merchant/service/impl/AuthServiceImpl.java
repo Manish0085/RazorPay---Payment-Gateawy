@@ -10,12 +10,12 @@ import com.razorpay.payment_gateway.merchant.entity.Merchant;
 import com.razorpay.payment_gateway.merchant.repository.AppUserRepository;
 import com.razorpay.payment_gateway.merchant.repository.MerchantRepository;
 import com.razorpay.payment_gateway.merchant.service.AuthService;
-import jakarta.transaction.Transactional;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor

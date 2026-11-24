@@ -1,8 +1,10 @@
 package com.razorpay.payment_gateway.merchant.service.impl;
 
 import com.razorpay.payment_gateway.common.exception.ResourceNotFoundException;
+import com.razorpay.payment_gateway.common.util.RandomizerUtil;
 import com.razorpay.payment_gateway.merchant.dto.request.CreateApiKeyRequest;
 import com.razorpay.payment_gateway.merchant.dto.response.ApiKeyCreateResponse;
+import com.razorpay.payment_gateway.merchant.dto.response.ApiKeyResponse;
 import com.razorpay.payment_gateway.merchant.entity.ApiKey;
 import com.razorpay.payment_gateway.merchant.entity.Merchant;
 import com.razorpay.payment_gateway.merchant.repository.ApiKeyRepository;
@@ -12,7 +14,10 @@ import com.razorpay.payment_gateway.merchant.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -25,12 +30,13 @@ public class ApiKeyServiceImpl implements ApiKeyService {
 
 
     @Override
+    @Transactional
     public ApiKeyCreateResponse create(UUID merchantId, CreateApiKeyRequest request) {
         Merchant merchant = merchantRepository.findById(merchantId)
                 .orElseThrow(() -> new ResourceNotFoundException("MERCHANT", merchantId));
 
-        String keyId = "rzp_" + request.environment().name().toUpperCase() + "big_random_string";
-        String rawSecret = "big_random_secret"; // TODO: replace with cryptographic random hex
+        String keyId = "rzp_" + request.environment().name().toLowerCase() + "_" + RandomizerUtil.randomBase64(24);
+        String rawSecret = RandomizerUtil.randomBase64(40); // TODO: replace with cryptographic random hex
 
         ApiKey apiKey = ApiKey.builder()
                 .merchant(merchant)
@@ -46,4 +52,47 @@ public class ApiKeyServiceImpl implements ApiKeyService {
                 rawSecret,
                 apiKey.getEnvironment());
     }
+
+    @Override
+    public List<ApiKeyResponse> listByMerchant(UUID merchantId) {
+        return apiKeyRepository.findByMerchant_Id(merchantId)
+                .stream()
+                .map(key -> new ApiKeyResponse(
+                        key.getId(), key.getKeyId(),
+                        key.getEnvironment(), key.isEnabled(),
+                        key.getLastUsedAt(), null
+                )).toList();
+    }
+
+    @Override
+    @Transactional
+    public void revoke(UUID merchantId, UUID keyId) {
+        ApiKey apiKey = apiKeyRepository.findById(keyId)
+                .filter(key -> key.getMerchant().getId().equals(merchantId))
+                .orElseThrow(() -> new ResourceNotFoundException("APIKEY", keyId));
+
+        apiKey.setEnabled(false);
+        apiKeyRepository.save(apiKey);
+    }
+
+    @Override
+    @Transactional
+    public ApiKeyCreateResponse rotate(UUID merchantId, UUID keyId) {
+        ApiKey apiKey = apiKeyRepository.findById(keyId)
+                .filter(key -> key.getMerchant().getId().equals(merchantId))
+                .orElseThrow(() -> new ResourceNotFoundException("APIKEY", keyId));
+
+        String newRawSecret = RandomizerUtil.randomBase64(40);
+        apiKey.setPreviousKeySecretHash(apiKey.getKeySecretHash());
+        apiKey.setKeySecretHash(newRawSecret);
+        apiKey.setRotatedAt(Instant.now());
+        apiKey.setGracePeriodExpiresAt(Instant.now().plusSeconds(86400));
+        apiKeyRepository.save(apiKey);
+        return new ApiKeyCreateResponse(apiKey.getId(),
+                apiKey.getKeyId(),
+                newRawSecret,
+                apiKey.getEnvironment());
+    }
+
+
 }

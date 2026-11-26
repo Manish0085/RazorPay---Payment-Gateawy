@@ -1,27 +1,44 @@
 package com.razorpay.payment_gateway.payment.service.impl;
 
 import com.razorpay.payment_gateway.common.enums.OrderStatus;
+import com.razorpay.payment_gateway.common.exception.BusinessRuleViolationException;
 import com.razorpay.payment_gateway.common.exception.DuplicateResourceException;
+import com.razorpay.payment_gateway.common.exception.ResourceNotFoundException;
 import com.razorpay.payment_gateway.payment.dto.request.CreateOrderRequest;
 import com.razorpay.payment_gateway.payment.dto.response.OrderResponse;
+import com.razorpay.payment_gateway.payment.dto.response.PaymentResponse;
 import com.razorpay.payment_gateway.payment.entity.OrderRecord;
+import com.razorpay.payment_gateway.payment.entity.Payment;
+import com.razorpay.payment_gateway.payment.mapper.PaymentMapper;
 import com.razorpay.payment_gateway.payment.repository.OrderRepository;
+import com.razorpay.payment_gateway.payment.repository.PaymentRepository;
 import com.razorpay.payment_gateway.payment.service.OrderService;
 import jakarta.validation.Valid;
+import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
+import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
+
+import static java.util.stream.Collectors.toList;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@Transactional(readOnly = true)
+@FieldDefaults(makeFinal = true, level = AccessLevel.PRIVATE)
 public class OrderServiceImpl implements OrderService {
 
-    private final OrderRepository orderRepository;
+    OrderRepository orderRepository;
+    PaymentRepository paymentRepository;
+
+    PaymentMapper paymentMapper;
 
     @Value("${payment.order.default-order-expiry-seconds:1800}")
     private final int defaultOrderExpirySeconds;
@@ -44,4 +61,50 @@ public class OrderServiceImpl implements OrderService {
                 order.getOrderStatus(), order.getAttempts(), order.getNotes(),
                 order.getExpiresAt(), null);
     }
+
+    @Override
+    public OrderResponse getByID(UUID merchantId, UUID orderId) {
+        OrderRecord orderRecord = orderRepository.findByIdAndMerchantId(orderId, merchantId)
+                .orElseThrow(() -> new ResourceNotFoundException("ORDER", "Order with Id " + orderId + " not found"));
+
+        return new OrderResponse(
+                orderRecord.getId(), orderRecord.getMerchantId(),
+                orderRecord.getReceipt(), orderRecord.getAmount(),
+                orderRecord.getOrderStatus(), orderRecord.getAttempts(),
+                orderRecord.getNotes(),  orderRecord.getExpiresAt(), null
+        );
+    }
+
+    @Override
+    public OrderResponse cancel(UUID merchantId, UUID orderId) {
+        OrderRecord order = orderRepository.findByIdAndMerchantId(orderId, merchantId)
+                .orElseThrow(() -> new ResourceNotFoundException("ORDER", "Order with Id " + orderId + " not found"));
+
+        if (order.getOrderStatus() == OrderStatus.CANCELLED || order.getOrderStatus() == OrderStatus.PAID) {
+            throw new BusinessRuleViolationException("ORDER_CANNOT_CANCEL", "Order cannot cancel with status: " + order.getOrderStatus().name());
+        }
+
+        order.setOrderStatus(OrderStatus.CANCELLED);
+        order = orderRepository.save(order);
+
+        return new OrderResponse(
+                order.getId(), order.getMerchantId(),
+                order.getReceipt(), order.getAmount(),
+                order.getOrderStatus(), order.getAttempts(),
+                order.getNotes(),  order.getExpiresAt(), null
+        );
+    }
+
+    @Override
+    public List<PaymentResponse> listPayments(UUID merchantId, UUID orderId) {
+        OrderRecord order = orderRepository.findByIdAndMerchantId(orderId, merchantId)
+                .orElseThrow(() -> new ResourceNotFoundException("ORDER", "Order with Id " + orderId + " not found"));
+
+        List<Payment> payments = paymentRepository.findByOrder_Id(order);
+        return payments.stream()
+                .map(paymentMapper::toResponse)
+                .toList();
+    }
+
+
 }

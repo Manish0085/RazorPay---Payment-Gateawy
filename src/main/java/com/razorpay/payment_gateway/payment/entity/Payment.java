@@ -108,6 +108,10 @@ public class Payment extends BaseEntity {
     @Column(name = "bank_reference", length = 64)
     String bankReference;
 
+    @Size(max = 64)
+    @Column(name = "processor_reference", length = 64)
+    String processorReference;
+
     @Size(max = 50)
     @Column(name = "error_code", length = 50)
     String errorCode;

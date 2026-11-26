@@ -10,12 +10,15 @@ import com.razorpay.payment_gateway.payment.entity.OrderRecord;
 import com.razorpay.payment_gateway.payment.entity.Payment;
 import com.razorpay.payment_gateway.payment.gateway.PaymentGatewayRouter;
 import com.razorpay.payment_gateway.payment.gateway.dto.PaymentRequest;
+import com.razorpay.payment_gateway.payment.gateway.dto.PaymentResult;
+import com.razorpay.payment_gateway.payment.mapper.PaymentMapper;
 import com.razorpay.payment_gateway.payment.repository.OrderRepository;
 import com.razorpay.payment_gateway.payment.repository.PaymentRepository;
 import com.razorpay.payment_gateway.payment.service.PaymentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
@@ -29,7 +32,10 @@ public class PaymentServiceImpl implements PaymentService {
     private final PaymentRepository paymentRepository;
 
     private final PaymentGatewayRouter gatewayRouter;
+
+    private final PaymentMapper paymentMapper;
     @Override
+    @Transactional
     public PaymentResponse initiate(UUID merchantId, PaymentInitRequest request){
         OrderRecord order = orderRepository.findByIdAndMerchantId(request.orderId(), merchantId)
                 .orElseThrow(() -> new ResourceNotFoundException("ORDER_NOT_FOUND", "Order with id " + request.orderId() + " not found"));
@@ -62,7 +68,28 @@ public class PaymentServiceImpl implements PaymentService {
                 request.method(),
                 request.methodDetails()
         );
-        gatewayRouter.initiate(paymentRequest);
-        return null;
+        PaymentResult result = gatewayRouter.initiate(paymentRequest);
+
+//
+//        if (result instanceof PaymentResult.Pending) {
+//            payment.setProcessorReference(payment.getProcessorReference());
+//        } else if (result instanceof PaymentResult.Failure failure) {
+//            payment.setPaymentStatus(PaymentStatus.FAILED);
+//            payment.setErrorCode(failure.errorCode());
+//            payment.setErrorDescription(failure.description());
+//        }
+        switch (request) {
+            case PaymentResult.Pending pending -> payment.setProcessorReference(pending.registrationRef());
+            case PaymentResult.Failure failure -> {
+                payment.setPaymentStatus(PaymentStatus.FAILED);
+                payment.setErrorCode(failure.errorCode());
+                payment.setErrorDescription(failure.description());
+            }
+        }
+
+        payment = paymentRepository.save(payment);
+        orderRepository.save(order);
+
+        return paymentMapper.toResponse(payment);
     }
 }

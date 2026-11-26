@@ -1,5 +1,6 @@
 package com.razorpay.payment_gateway.payment.entity;
 
+import com.razorpay.payment_gateway.common.entity.BaseEntity;
 import com.razorpay.payment_gateway.common.entity.Money;
 import com.razorpay.payment_gateway.common.enums.PaymentMethod;
 import com.razorpay.payment_gateway.common.enums.PaymentStatus;
@@ -31,7 +32,13 @@ import java.util.UUID;
  * network, masked VPA, bank code).
  */
 @Entity
-@Table(name = "payment")
+@Table(
+        name = "payment",
+        indexes = {
+                @Index(name = "idx_payment_order_id", columnList = "order_id"),
+                @Index(name = "idx_payment_merchant_id", columnList = "merchant_id")
+        }
+)
 @Getter
 @Setter
 @AllArgsConstructor
@@ -39,7 +46,7 @@ import java.util.UUID;
 @Builder
 @ToString(exclude = {"order", "methodDetails"})
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class Payment {
+public class Payment extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

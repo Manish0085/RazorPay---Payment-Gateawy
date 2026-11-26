@@ -1,5 +1,6 @@
 package com.razorpay.payment_gateway.payment.entity;
 
+import com.razorpay.payment_gateway.common.entity.BaseEntity;
 import com.razorpay.payment_gateway.common.enums.PaymentActor;
 import com.razorpay.payment_gateway.common.enums.PaymentEvent;
 import com.razorpay.payment_gateway.common.enums.PaymentStatus;
@@ -25,7 +26,12 @@ import java.util.UUID;
  */
 @Entity
 @Immutable
-@Table(name = "payment_transition_log")
+@Table(
+        name = "payment_transition_log",
+        indexes = {
+                @Index(name = "idx_payment_transition_log_payment_id", columnList = "payment_id")
+        }
+)
 @Getter
 @Setter
 @AllArgsConstructor
@@ -33,7 +39,7 @@ import java.util.UUID;
 @Builder
 @ToString(exclude = "payment")
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class PaymentTransitionLog {
+public class PaymentTransitionLog extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

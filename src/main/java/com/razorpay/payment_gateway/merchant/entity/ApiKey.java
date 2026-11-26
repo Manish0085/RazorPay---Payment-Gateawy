@@ -1,5 +1,6 @@
 package com.razorpay.payment_gateway.merchant.entity;
 
+import com.razorpay.payment_gateway.common.entity.BaseEntity;
 import com.razorpay.payment_gateway.common.enums.Environment;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
@@ -23,7 +24,12 @@ import java.util.UUID;
  * that time, then must be rejected. See {@link #isUsableAt(Instant)}.
  */
 @Entity
-@Table(name = "api_key")
+@Table(
+        name = "api_key",
+        indexes = {
+                    @Index(name = "idx_api_key_merchant__env", columnList = "merchant_id, environment, enabled")
+        }
+)
 @Getter
 @Setter
 @AllArgsConstructor
@@ -31,7 +37,7 @@ import java.util.UUID;
 @Builder
 @ToString(exclude = {"merchant", "keySecretHash"})
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class ApiKey {
+public class ApiKey extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

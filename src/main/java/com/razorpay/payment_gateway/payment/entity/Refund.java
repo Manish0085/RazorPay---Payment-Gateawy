@@ -1,5 +1,6 @@
 package com.razorpay.payment_gateway.payment.entity;
 
+import com.razorpay.payment_gateway.common.entity.BaseEntity;
 import com.razorpay.payment_gateway.common.entity.Money;
 import com.razorpay.payment_gateway.common.enums.RefundStatus;
 import jakarta.persistence.*;
@@ -35,7 +36,7 @@ import java.util.UUID;
 @Builder
 @ToString(exclude = {"payment", "notes"})
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class Refund {
+public class Refund extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

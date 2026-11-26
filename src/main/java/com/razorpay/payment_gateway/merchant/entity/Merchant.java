@@ -1,5 +1,6 @@
 package com.razorpay.payment_gateway.merchant.entity;
 
+import com.razorpay.payment_gateway.common.entity.BaseEntity;
 import com.razorpay.payment_gateway.common.enums.BusinessType;
 import com.razorpay.payment_gateway.common.enums.MerchantStatus;
 import jakarta.persistence.*;
@@ -25,10 +26,10 @@ import java.util.UUID;
  */
 @Entity
 @Table(
-        name = "merchant"
-//        indexes = {
-//                @Index(name = "idx_merchant_status", columnList = "merchant_status")
-//        }
+        name = "merchant",
+        indexes = {
+                @Index(name = "idx_merchant_status", columnList = "merchant_status")
+        }
 )
 @Getter
 @Setter
@@ -36,7 +37,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class Merchant {
+public class Merchant extends BaseEntity {
 
     /** Internal immutable identifier (UUID). Exposed to clients via a prefixed public id if needed. */
     @Id

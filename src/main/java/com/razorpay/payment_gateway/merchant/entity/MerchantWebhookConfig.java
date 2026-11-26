@@ -1,5 +1,6 @@
 package com.razorpay.payment_gateway.merchant.entity;
 
+import com.razorpay.payment_gateway.common.entity.BaseEntity;
 import com.razorpay.payment_gateway.common.enums.Environment;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
@@ -25,7 +26,12 @@ import java.util.UUID;
  * addresses, re-resolved at send time) are done in the service layer.
  */
 @Entity
-@Table(name = "merchant_webhook_config")
+@Table(
+        name = "merchant_webhook_config",
+        indexes = {
+                @Index(name = "idx_webhook_merchant_id", columnList = "merchant_id, enabled")
+        }
+)
 @Getter
 @Setter
 @AllArgsConstructor
@@ -33,7 +39,7 @@ import java.util.UUID;
 @Builder
 @ToString(exclude = {"merchant", "webhookSecretEncrypted"})
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class MerchantWebhookConfig {
+public class MerchantWebhookConfig extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

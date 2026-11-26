@@ -1,5 +1,6 @@
 package com.razorpay.payment_gateway.merchant.entity;
 
+import com.razorpay.payment_gateway.common.entity.BaseEntity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.*;
@@ -18,7 +19,13 @@ import java.util.UUID;
  * merchant among non-deleted customers. Deletion is soft: set {@code deletedAt}.
  */
 @Entity
-@Table(name = "customer")
+@Table(
+        name = "customer",
+        indexes = {
+                @Index(name = "idx_customer_merchant_id", columnList = "merchant_id"),
+                @Index(name = "idx_customer_email", columnList = "email")
+        }
+)
 @Getter
 @Setter
 @AllArgsConstructor
@@ -26,7 +33,7 @@ import java.util.UUID;
 @Builder
 @ToString(exclude = "merchant")
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class Customer {
+public class Customer extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

@@ -1,5 +1,6 @@
 package com.razorpay.payment_gateway.merchant.entity;
 
+import com.razorpay.payment_gateway.common.entity.BaseEntity;
 import com.razorpay.payment_gateway.common.enums.UserRole;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
@@ -22,7 +23,12 @@ import java.util.UUID;
  * Never expose this entity from a controller; map it to a response DTO.
  */
 @Entity
-@Table(name = "app_user")
+@Table(
+        name = "app_user",
+        indexes = {
+                @Index(name = "idx_app_user_merchant_id", columnList = "merchant_id")
+        }
+)
 @Getter
 @Setter
 @AllArgsConstructor
@@ -30,7 +36,7 @@ import java.util.UUID;
 @Builder
 @ToString(exclude = {"passwordHash", "merchant"})
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class AppUser {
+public class AppUser extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

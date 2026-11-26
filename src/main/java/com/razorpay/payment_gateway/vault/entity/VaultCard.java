@@ -1,5 +1,6 @@
 package com.razorpay.payment_gateway.vault.entity;
 
+import com.razorpay.payment_gateway.common.entity.BaseEntity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.*;
@@ -32,7 +33,7 @@ import java.util.UUID;
 @Builder
 @ToString(exclude = {"encryptedPan", "encryptedDek", "fingerprint", "cardHolderName"})
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class VaultCard {
+public class VaultCard extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

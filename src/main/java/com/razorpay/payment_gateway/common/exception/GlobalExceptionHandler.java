@@ -21,10 +21,9 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.of(errorCode, ex.getMessage()));
     }
 //
-//    @ExceptionHandler(BusinessRuleViolationException.class)
-//    public ResponseEntity<ErrorResponse> handleBusinessRuleViolation(BusinessRuleViolationException ex) {
-//        String errorCode = ex.getResourceName().toLowerCase() + "_NOT_FOUND";
-//        return ResponseEntity.status(HttpStatus.NOT_FOUND)
-//                .body(ErrorResponse.of(errorCode, ex.getMessage()));
-//    }
+    @ExceptionHandler(InvalidStateTransitionException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidStateTransition(InvalidStateTransitionException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ErrorResponse.of("INVALID_TRANSITION", ex.getMessage()));
+    }
 }

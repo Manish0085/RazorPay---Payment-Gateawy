@@ -1,6 +1,7 @@
 package com.razorpay.payment_gateway.payment.service.impl;
 
 import com.razorpay.payment_gateway.common.enums.OrderStatus;
+import com.razorpay.payment_gateway.common.enums.PaymentEvent;
 import com.razorpay.payment_gateway.common.enums.PaymentStatus;
 import com.razorpay.payment_gateway.common.exception.BusinessRuleViolationException;
 import com.razorpay.payment_gateway.common.exception.ResourceNotFoundException;
@@ -8,6 +9,7 @@ import com.razorpay.payment_gateway.payment.dto.request.PaymentInitRequest;
 import com.razorpay.payment_gateway.payment.dto.response.PaymentResponse;
 import com.razorpay.payment_gateway.payment.entity.OrderRecord;
 import com.razorpay.payment_gateway.payment.entity.Payment;
+import com.razorpay.payment_gateway.payment.entity.PaymentTransitionLog;
 import com.razorpay.payment_gateway.payment.gateway.PaymentGatewayRouter;
 import com.razorpay.payment_gateway.payment.gateway.dto.PaymentRequest;
 import com.razorpay.payment_gateway.payment.gateway.dto.PaymentResult;
@@ -15,25 +17,36 @@ import com.razorpay.payment_gateway.payment.mapper.PaymentMapper;
 import com.razorpay.payment_gateway.payment.repository.OrderRepository;
 import com.razorpay.payment_gateway.payment.repository.PaymentRepository;
 import com.razorpay.payment_gateway.payment.service.PaymentService;
+import com.razorpay.payment_gateway.payment.statemachine.PaymentTransitionService;
+import jdk.dynalink.Operation;
+import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
+import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@FieldDefaults(makeFinal = true, level = AccessLevel.PRIVATE)
 public class PaymentServiceImpl implements PaymentService {
 
-    private final OrderRepository orderRepository;
-    private final PaymentRepository paymentRepository;
+    OrderRepository orderRepository;
+    PaymentRepository paymentRepository;
 
-    private final PaymentGatewayRouter gatewayRouter;
+    PaymentGatewayRouter gatewayRouter;
 
-    private final PaymentMapper paymentMapper;
+    PaymentMapper paymentMapper;
+
+    PaymentTransitionService paymentTransitionService;
+
+
     @Override
     @Transactional
     public PaymentResponse initiate(UUID merchantId, PaymentInitRequest request){
@@ -81,14 +94,47 @@ public class PaymentServiceImpl implements PaymentService {
         switch (request) {
             case PaymentResult.Pending pending -> payment.setProcessorReference(pending.registrationRef());
             case PaymentResult.Failure failure -> {
-                payment.setPaymentStatus(PaymentStatus.FAILED);
+//                payment.setPaymentStatus(PaymentStatus.FAILED);
+                paymentTransitionService.apply(payment, PaymentEvent.AUTHORIZE_FAIL)
                 payment.setErrorCode(failure.errorCode());
                 payment.setErrorDescription(failure.description());
+            }
+            case PaymentResult.Success success-> {
+
             }
         }
 
         payment = paymentRepository.save(payment);
         orderRepository.save(order);
+
+        // TODO: send an outbox (kafka event)
+        return paymentMapper.toResponse(payment);
+    }
+
+    @Override
+    public PaymentResponse capture(UUID merchantId, UUID paymentId) {
+
+        Payment payment  = paymentRepository.findByIdAndMerchantId(paymentId, merchantId)
+                .orElseThrow(()-> new ResourceNotFoundException("PAYMENT_NOT_FOUND", "Payment not found with id: " + paymentId));
+
+
+        paymentTransitionService.apply(payment, PaymentEvent.CAPTURE_REQUEST);
+        PaymentResult result = gatewayRouter.capture(payment.getMethod(), paymentId);
+
+        if (result instanceof PaymentResult.Success success) {
+            paymentTransitionService.apply(payment, PaymentEvent.CAPTURE_SUCCESS);
+            payment.setCapturedAt(Instant.now());
+            log.info("Payment captured, paymentId: {}", paymentId);
+
+        } else if (result instanceof PaymentResult.Failure failure) {
+            paymentTransitionService.apply(payment, PaymentEvent.CAPTURE_FAIL);
+            payment.setErrorCode(failure.errorCode());
+            payment.setErrorDescription(failure.description());
+            log.warn("Payment capture Failed, paymentId: {}", paymentId);
+        }
+
+        payment = paymentRepository.save(payment);
+        // TODO: send an outbox (kafka event)
 
         return paymentMapper.toResponse(payment);
     }

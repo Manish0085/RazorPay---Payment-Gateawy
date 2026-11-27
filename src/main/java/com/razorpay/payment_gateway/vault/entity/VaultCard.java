@@ -1,6 +1,7 @@
 package com.razorpay.payment_gateway.vault.entity;
 
 import com.razorpay.payment_gateway.common.entity.BaseEntity;
+import com.razorpay.payment_gateway.common.enums.CardBrand;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.*;
@@ -89,7 +90,7 @@ public class VaultCard extends BaseEntity {
 
     @NotNull
     @Column(nullable = false, updatable = false, length = 20)
-    String brand;
+    CardBrand brand;
 
     /** 1-12. */
     @NotNull

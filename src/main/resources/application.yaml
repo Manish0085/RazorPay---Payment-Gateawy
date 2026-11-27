@@ -23,3 +23,6 @@ spring:
 payment:
   order:
     default-order-expiry-seconds: 600
+
+vault:
+  master-key: {VAULT_MASTER_KEY:qwertyuioplkjhgfdsazxcvbnm}

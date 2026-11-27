@@ -19,10 +19,28 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format-sql: true
 
+vault:
+  master-key: {VAULT_MASTER_KEY:qwertyuioplkjhgfdsazxcvbnm}
+
 
 payment:
   order:
     default-order-expiry-seconds: 600
 
-vault:
-  master-key: {VAULT_MASTER_KEY:qwertyuioplkjhgfdsazxcvbnm}
+  simulator:
+    poll-interval-ms: 5000
+    chaos-mode: NORMAL
+    methods:
+      CARD:
+        min-delay-seconds: 2
+        max-delay-seconds: 6
+        success-rate: 90
+      NET_BANKING:
+        min-delay-seconds: 4
+        max-delay-seconds: 10
+        success-rate: 80
+      UPI:
+        min-delay-seconds: 1
+        max-delay-seconds: 3
+        success-rate: 95
+

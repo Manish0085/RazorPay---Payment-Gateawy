@@ -30,9 +30,7 @@ public class CardPaymentAdapter implements PaymentAdapter {
                 new PaymentResult.Failure(failure.errorCode(), failure.errorDescription());
             case PaymentProcessorResponse.Pending pending ->
                 new PaymentResult.Pending(pending.processorReference());
-
-
-        }
+        };
     }
 
     @Override

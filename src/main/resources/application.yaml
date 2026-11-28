@@ -20,7 +20,7 @@ spring:
         format-sql: true
 
 vault:
-  master-key: {VAULT_MASTER_KEY:qwertyuioplkjhgfdsazxcvbnm}
+  master-key: ${VAULT_MASTER_KEY:qwertyuioplkjhgfdsazxcvbnm}
 
 
 payment:
@@ -44,3 +44,7 @@ payment:
         max-delay-seconds: 3
         success-rate: 95
 
+
+jwt:
+  secret-key: ${JWT_SECRET:qwertyuioplkjhgfdsazxcvbnm}
+  expiration: {JWT_EXPIRATION:100*60}

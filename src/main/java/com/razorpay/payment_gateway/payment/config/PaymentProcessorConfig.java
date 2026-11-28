@@ -9,20 +9,30 @@ import com.razorpay.payment_gateway.payment.processor.PaymentProcessor;
 import com.razorpay.payment_gateway.payment.processor.strategy.CardPaymentProcessor;
 import com.razorpay.payment_gateway.payment.processor.strategy.NetBankingPaymentProcessor;
 import com.razorpay.payment_gateway.payment.processor.strategy.UpiPaymentProcessor;
+import lombok.AccessLevel;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.FieldDefaults;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.util.Map;
 
 @Configuration
+@FieldDefaults(makeFinal = true, level = AccessLevel.PRIVATE)
+@RequiredArgsConstructor
 public class PaymentProcessorConfig {
+
+    CardPaymentProcessor cardPaymentProcessor;
+    NetBankingPaymentProcessor netBankingPaymentProcessor;
+    UpiPaymentProcessor upiPaymentProcessor;
+
 
     @Bean
     public Map<PaymentMethod, PaymentProcessor> paymentAdapterMap() {
         return Map.of(
-                PaymentMethod.CARD, new CardPaymentProcessor(),
-                PaymentMethod.UPI, new UpiPaymentProcessor(),
-                PaymentMethod.NETBANKING, new NetBankingPaymentProcessor()
+                PaymentMethod.CARD, cardPaymentProcessor,
+                PaymentMethod.UPI, upiPaymentProcessor,
+                PaymentMethod.NETBANKING, netBankingPaymentProcessor
         );
     }
 }

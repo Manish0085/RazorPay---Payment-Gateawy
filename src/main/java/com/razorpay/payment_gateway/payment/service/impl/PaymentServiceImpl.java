@@ -46,6 +46,8 @@ public class PaymentServiceImpl implements PaymentService {
 
     PaymentTransitionService paymentTransitionService;
 
+    PaymentGatewayRouter paymentGatewayRouter;
+
 
     @Override
     @Transactional
@@ -81,6 +83,8 @@ public class PaymentServiceImpl implements PaymentService {
                 request.method(),
                 request.methodDetails()
         );
+
+        paymentTransitionService.apply(payment, PaymentEvent.AUTHORIZE_ATTEMPT);
         PaymentResult result = gatewayRouter.initiate(paymentRequest);
 
 //
@@ -95,7 +99,7 @@ public class PaymentServiceImpl implements PaymentService {
             case PaymentResult.Pending pending -> payment.setProcessorReference(pending.registrationRef());
             case PaymentResult.Failure failure -> {
 //                payment.setPaymentStatus(PaymentStatus.FAILED);
-                paymentTransitionService.apply(payment, PaymentEvent.AUTHORIZE_FAIL)
+                paymentTransitionService.apply(payment, PaymentEvent.AUTHORIZE_FAIL);
                 payment.setErrorCode(failure.errorCode());
                 payment.setErrorDescription(failure.description());
             }
@@ -112,6 +116,7 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     @Override
+
     public PaymentResponse capture(UUID merchantId, UUID paymentId) {
 
         Payment payment  = paymentRepository.findByIdAndMerchantId(paymentId, merchantId)
@@ -137,5 +142,47 @@ public class PaymentServiceImpl implements PaymentService {
         // TODO: send an outbox (kafka event)
 
         return paymentMapper.toResponse(payment);
+    }
+
+    @Override
+    @Transactional
+    public void resolveAuthorization(UUID paymentId, boolean approve, String bankRef, String errorCode, String errorDescription) {
+        Payment payment = paymentRepository.findById(paymentId)
+                .orElseThrow(() -> new ResourceNotFoundException("PAYMENT_NOT_FOUND", "Payment with Id " + paymentId + " not found"));
+
+        if (payment.getPaymentStatus() != PaymentStatus.AUTHORIZING) {
+            log.warn("Payment is not in the Authorizing state, paymentId {}, status {}", paymentId, payment.getPaymentStatus());
+            return;
+        }
+
+        OrderRecord orderRecord = payment.getOrder();
+        if (approve) {
+            paymentTransitionService.apply(payment, PaymentEvent.AUTHORIZE_SUCCESS);
+            payment.setBankReference(bankRef);
+            payment.setAuthorizedAt(Instant.now());
+
+            // Auto Capture
+            paymentTransitionService.apply(payment, PaymentEvent.CAPTURE_REQUEST);
+            PaymentResult captureResult = paymentGatewayRouter.capture(payment.getMethod(), paymentId);
+
+            if (captureResult instanceof PaymentResult.Success success) {
+                paymentTransitionService.apply(payment, PaymentEvent.CAPTURE_SUCCESS);
+                payment.setCapturedAt(Instant.now());
+                orderRecord.setOrderStatus(OrderStatus.PAID);
+            } else if (captureResult instanceof PaymentResult.Failure failure) {
+                paymentTransitionService.apply(payment, PaymentEvent.CAPTURE_FAIL);
+                payment.setErrorCode(failure.errorCode());
+                payment.setErrorDescription(failure.description());
+            }
+
+        } else {
+            paymentTransitionService.apply(payment, PaymentEvent.AUTHORIZE_FAIL);
+            payment.setErrorCode(errorCode);
+            payment.setErrorDescription(errorDescription);
+        }
+        paymentRepository.save(payment);
+        orderRepository.save(orderRecord);
+
+        // TODO: send an outbox (kafka event)
     }
 }

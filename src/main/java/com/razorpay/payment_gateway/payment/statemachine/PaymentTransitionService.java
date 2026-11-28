@@ -25,7 +25,6 @@ public class PaymentTransitionService {
             throw new InvalidStateTransitionException(payment.getPaymentStatus().name(), event.name());
         }
 
-        payment.setPaymentStatus(next);
         PaymentTransitionLog log = PaymentTransitionLog.builder()
                 .payment(payment)
                 .fromStatus(payment.getPaymentStatus())
@@ -35,6 +34,7 @@ public class PaymentTransitionService {
                 .occurredAt(Instant.now())
                 .build();
 
+        payment.setPaymentStatus(next);
 
         paymentTransitionLogRepository.save(log);
         return next;

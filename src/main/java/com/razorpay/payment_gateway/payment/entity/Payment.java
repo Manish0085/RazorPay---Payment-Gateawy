@@ -87,12 +87,12 @@ public class Payment extends BaseEntity {
     @Column(name = "idempotency_key", nullable = false, updatable = false, length = 64)
     String idempotencyKey;
 
+
     @NotNull
     @Enumerated(EnumType.STRING)
     @Column(name = "payment_status", nullable = false, length = 25)
     @Builder.Default
     PaymentStatus paymentStatus = PaymentStatus.CREATED;
-
     @NotNull
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, updatable = false, length = 20)

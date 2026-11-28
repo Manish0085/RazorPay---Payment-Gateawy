@@ -8,8 +8,14 @@ import lombok.*;
 import lombok.experimental.FieldDefaults;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.jspecify.annotations.Nullable;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
 
 import java.time.Instant;
+import java.util.Collection;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -36,7 +42,7 @@ import java.util.UUID;
 @Builder
 @ToString(exclude = {"passwordHash", "merchant"})
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class AppUser extends BaseEntity {
+public class AppUser extends BaseEntity implements UserDetails {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -71,5 +77,22 @@ public class AppUser extends BaseEntity {
     @PreUpdate
     void normalize() {
         if (email != null) email = email.trim().toLowerCase();
+    }
+
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        return List.of(
+                    new SimpleGrantedAuthority("ROLE_" + role)
+                );
+    }
+
+    @Override
+    public @Nullable String getPassword() {
+        return this.passwordHash;
+    }
+
+    @Override
+    public String getUsername() {
+        return this.email;
     }
 }

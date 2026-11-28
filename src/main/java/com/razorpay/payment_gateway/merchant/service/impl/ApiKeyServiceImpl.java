@@ -12,8 +12,11 @@ import com.razorpay.payment_gateway.merchant.repository.ApiKeyRepository;
 import com.razorpay.payment_gateway.merchant.repository.MerchantRepository;
 import com.razorpay.payment_gateway.merchant.service.ApiKeyService;
 import com.razorpay.payment_gateway.merchant.service.AuthService;
+import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
+import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,11 +27,13 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@FieldDefaults(makeFinal = true, level = AccessLevel.PRIVATE)
 public class ApiKeyServiceImpl implements ApiKeyService {
 
-    private final ApiKeyRepository apiKeyRepository;
-    private final MerchantRepository merchantRepository;
-    private final ApiKeyMapper apiKeyMapper;
+    ApiKeyRepository apiKeyRepository;
+    MerchantRepository merchantRepository;
+    ApiKeyMapper apiKeyMapper;
+    BCryptPasswordEncoder BCRYPT = new BCryptPasswordEncoder();
 
     @Override
     @Transactional
@@ -42,7 +47,7 @@ public class ApiKeyServiceImpl implements ApiKeyService {
         ApiKey apiKey = ApiKey.builder()
                 .merchant(merchant)
                 .keyId(keyId)
-                .keySecretHash(rawSecret)
+                .keySecretHash(BCRYPT.encode(rawSecret))
                 .environment(request.environment())
                 .build();
 
@@ -83,7 +88,7 @@ public class ApiKeyServiceImpl implements ApiKeyService {
         if(!apiKey.isEnabled()) throw new RuntimeException("Cannot rotate a disabled key");
         String newRawSecret = RandomizerUtil.randomBase64(40);
         apiKey.setPreviousKeySecretHash(apiKey.getKeySecretHash());
-        apiKey.setKeySecretHash(newRawSecret);
+        apiKey.setKeySecretHash(BCRYPT.encode(newRawSecret));
         apiKey.setRotatedAt(Instant.now());
         apiKey.setGracePeriodExpiresAt(Instant.now().plusSeconds(86400));
         apiKeyRepository.save(apiKey);
